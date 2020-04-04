@@ -1,0 +1,43 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "version": "1.0.0",
+        "title": "Hello World App"
+    },
+    "host": "localhost:4321",
+    "basePath": "/",
+    "schemes": [
+        "http",
+        "https"
+    ],
+    "consumes": [
+        "application/json"
+    ],
+    "produces": [
+        "application/json"
+    ],
+    "paths": {
+        "/users/{id}": {
+            "get": {
+            "description": "Returns the user with the id",
+            "parameters": [
+                {
+                "name": "id",
+                "in": "path",
+                "description": "Id of the user",
+                "required": true,
+                "type": "number"
+                }
+            ],
+            "responses": {
+                "default": {
+                "description": "Try out for a successful response"
+                }
+            }
+            }
+        },
+        "/swagger": {
+            "x-swagger-pipe": "swagger_raw"
+        }
+    }
+}
