@@ -1,17 +1,37 @@
-const path = require('path');
+//npm modules
 const express = require('express');
-const app = express();
+const uuid = require('uuid');
+const session = require('express-session')
 const addAllRoutes = require('./routes');
-const swaggerUi = require('swagger-ui-express');
-const swaggerDocument = require('../swagger.json');
 
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
-app.use((req, res, next) => {
-    console.log(`hit: ${req.originalUrl}`);
-    next();
-});
+// create the server
+const app = express();
 
-app.use(express.static(path.join(__dirname, '..', 'public')));
+// add & configure middleware
+app.use(session({
+  genid: (req) => {
+    console.log('--------------------------------------: ');
+    console.log('Inside the session middleware')
+    console.log('middleware sessionID', req.sessionID)
+    return uuid.v4() // use UUIDs for session IDs
+  },
+  secret: 'keyboard cat',
+  resave: false,
+  saveUninitialized: true
+}))
+
+// create the homepage route at '/'
+app.get('/', (req, res) => {
+  console.log('Inside the homepage callback function')
+  console.log('sessionId on home:', req.sessionID)
+  console.log('--------------------------------------:\n');
+  res.send(`You hit home page!\n`)
+})
+
+app.get('/goofin', (req, res) => {
+    req.cookie('test', { httpOnly: true });
+    console.log(req.cookie.test);
+})
 
 addAllRoutes(app);
 
