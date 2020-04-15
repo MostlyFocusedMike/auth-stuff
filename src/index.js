@@ -1,8 +1,8 @@
-//npm modules
 const express = require('express');
 const uuid = require('uuid');
-const session = require('express-session')
+const session = require('express-session');
 const addAllRoutes = require('./routes');
+const FileStore = require('session-file-store')(session);
 
 // create the server
 const app = express();
@@ -10,11 +10,11 @@ const app = express();
 // add & configure middleware
 app.use(session({
   genid: (req) => {
-    console.log('--------------------------------------: ');
     console.log('Inside the session middleware')
-    console.log('middleware sessionID', req.sessionID)
+    console.log(req.sessionID)
     return uuid.v4() // use UUIDs for session IDs
   },
+  store: new FileStore(),
   secret: 'keyboard cat',
   resave: false,
   saveUninitialized: true
@@ -23,14 +23,15 @@ app.use(session({
 // create the homepage route at '/'
 app.get('/', (req, res) => {
   console.log('Inside the homepage callback function')
-  console.log('sessionId on home:', req.sessionID)
-  console.log('--------------------------------------:\n');
+  console.log(req.sessionID)
+  console.log('req.session: ', req.session);
+  // req.session is where you store any info you want
+  if (req.session.views) {
+    req.session.views++;
+  } else {
+      req.session.views = 1;
+  }
   res.send(`You hit home page!\n`)
-})
-
-app.get('/goofin', (req, res) => {
-    req.cookie('test', { httpOnly: true });
-    console.log(req.cookie.test);
 })
 
 addAllRoutes(app);
