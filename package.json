@@ -1,10 +1,11 @@
 {
-  "name": "passport",
+  "name": "auth-stuff",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
     "start": "nodemon --ignore sessions/ src/index.js",
+    "login:post": "curl -X POST http://localhost:3000/login -b cookie-file.txt -H 'Content-Type: application/json' -d '{\"email\":\"test@test.com\", \"password\":\"password\"}'",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -14,6 +15,8 @@
     "express": "^4.17.1",
     "express-session": "^1.17.0",
     "nodemon": "^2.0.2",
+    "passport": "^0.4.1",
+    "passport-local": "^1.0.0",
     "session-file-store": "^1.4.0",
     "uuid": "^7.0.3"
   }
