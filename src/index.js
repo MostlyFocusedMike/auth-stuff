@@ -5,25 +5,26 @@ const addAllRoutes = require('./routes');
 const FileStore = require('session-file-store')(session);
 const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
+const fetch = require('node-fetch');
 
-const users = [
-  {id: '2f24vvg', email: 'test@test.com', password: 'password'}
-]
+
 
 // configure passport.js to use the local strategy
 passport.use(new LocalStrategy(
-  { usernameField: 'email' },
-  (email, password, done) => {
-    console.log('Inside local strategy callback')
-    // here is where you make a call to the database
-    // to find the user based on their username or email address
-    // for now, we'll just pretend we found that it was users[0]
-    const user = users[0]
-    if(email === user.email && password === user.password) {
-      console.log('Local strategy returned true')
-      return done(null, user)
+    { usernameField: 'email' },
+    async (email, password, done) => {
+        const dbUser = await fetch(`http://localhost:5000/users?email=${email}`).then(r => r.json())
+        const user = dbUser ? dbUser[0] : {};
+        console.log('user: ', user);
+        console.log('Inside local strategy callback')
+        // here is where you make a call to the database
+        // to find the user based on their username or email address
+        // for now, we'll just pretend we found that it was users[0]
+        if (email === user.email && password === user.password) {
+            console.log('Local strategy returned true')
+            return done(null, user)
+        }
     }
-  }
 ));
 
 // tell passport how to serialize the user
@@ -34,9 +35,12 @@ passport.serializeUser((user, done) => {
 
 passport.deserializeUser((id, done) => {
     console.log('Inside deserializeUser callback')
+    console.log('this function takes the session id (which is the user id) and decrypts it so the app has the user');
     console.log(`The user id passport saved in the session file store is: ${id}`)
-    const user = users[0].id === id ? users[0] : false;
-    done(null, user);
+    fetch(`http://localhost:5000/users/${id}`)
+        .then(r => r.json())
+        .then(user => done(null, user))
+        .catch(error => done(error, false))
 });
 
 // create the server
