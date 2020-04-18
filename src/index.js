@@ -7,22 +7,24 @@ const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
 const fetch = require('node-fetch');
 
-
-
 // configure passport.js to use the local strategy
 passport.use(new LocalStrategy(
+    // the first arg is pulling in the data from the POST request, and then sends it in as the first argument
+    // of the auth callback
+    // if it can't find the field, the whole thing never runs and the user is not authenticated
     { usernameField: 'email' },
     async (email, password, done) => {
+        console.log('email: ', email);
         const dbUser = await fetch(`http://localhost:5000/users?email=${email}`).then(r => r.json())
-        const user = dbUser ? dbUser[0] : {};
+        const user = dbUser[0] || {};
         console.log('user: ', user);
         console.log('Inside local strategy callback')
-        // here is where you make a call to the database
-        // to find the user based on their username or email address
-        // for now, we'll just pretend we found that it was users[0]
         if (email === user.email && password === user.password) {
             console.log('Local strategy returned true')
             return done(null, user)
+        } else {
+            console.log('bad boi: ', );
+            return done(null, false, {message: "bad creds"});
         }
     }
 ));
@@ -33,10 +35,10 @@ passport.serializeUser((user, done) => {
     done(null, user.id);
 });
 
+// Inside deserializeUser callback
+// this function takes the session id (which is the user id) and decrypts it so the app has the user
 passport.deserializeUser((id, done) => {
-    console.log('Inside deserializeUser callback')
-    console.log('this function takes the session id (which is the user id) and decrypts it so the app has the user');
-    console.log(`The user id passport saved in the session file store is: ${id}`)
+    console.log('in deserialize: ', );
     fetch(`http://localhost:5000/users/${id}`)
         .then(r => r.json())
         .then(user => done(null, user))
@@ -51,7 +53,7 @@ app.use(express.json());
 app.use(session({
   genid: (req) => {
     console.log('Inside the session middleware')
-    console.log(req.sessionID)
+    console.log('middle ware session id:', req.sessionID)
     return uuid.v4() // use UUIDs for session IDs
   },
   store: new FileStore(),
@@ -61,14 +63,11 @@ app.use(session({
 }))
 
 app.use(passport.initialize());
-// it's important that express-session
+// it's important that express-session comes first
 app.use(passport.session());
 
 // create the homepage route at '/'
 app.get('/', (req, res) => {
-  console.log('Inside the homepage callback function')
-  console.log(req.sessionID)
-  console.log('req.session: ', req.session);
   // req.session is where you store any info you want
   if (req.session.views) {
     req.session.views++;
@@ -91,12 +90,15 @@ app.post('/login', (req, res, next) => {
     const authFunc = (err, user, info) => {
         console.log('Inside passport.authenticate() callback');
         console.log(`req.session.passport: ${JSON.stringify(req.session.passport)}`)
-        console.log(`req.user: ${JSON.stringify(user)}`)
+        console.log(`req.user outside: ${JSON.stringify(user)}`)
         // req.login is added by passport
-        req.login(user, (err) => {
-            console.log('Inside req.login() callback')
+        console.log('err: ', err);
+        if (err) { return next(err); }
+        if (!user) {
+            return res.redirect('/login');
+        }
+        req.logIn(user, (err) => {
             console.log(`req.session.passport: ${JSON.stringify(req.session.passport)}`)
-            console.log(`req.user: ${JSON.stringify(user)}`)
             return res.send('You were authenticated & logged in!\n');
         })
     }
@@ -105,7 +107,6 @@ app.post('/login', (req, res, next) => {
 })
 
 app.get('/authrequired', (req, res) => {
-    console.log('Inside GET /authrequired callback')
     console.log(`User authenticated? ${req.isAuthenticated()}`)
     if(req.isAuthenticated()) {
         res.send('you hit the authentication endpoint\n')
