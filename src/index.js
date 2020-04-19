@@ -6,6 +6,7 @@ const FileStore = require('session-file-store')(session);
 const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
 const fetch = require('node-fetch');
+const bcrypt = require('bcrypt-nodejs');
 
 // https://medium.com/@evangow/server-authentication-basics-express-sessions-passport-and-curl-359b7456003d
 
@@ -19,15 +20,11 @@ passport.use(new LocalStrategy(
         console.log('email: ', email);
         const dbUser = await fetch(`http://localhost:5000/users?email=${email}`).then(r => r.json())
         const user = dbUser[0] || {};
-        console.log('user: ', user);
-        console.log('Inside local strategy callback')
-        if (email === user.email && password === user.password) {
-            console.log('Local strategy returned true')
-            return done(null, user)
-        } else {
-            console.log('bad boi: ', );
-            return done(null, false, {message: "bad creds"});
+        if (!user) return done(null, false, { message: 'Invalid credentials.\n' });
+        if (!bcrypt.compareSync(password, user.password)) {
+            return done(null, false, { message: 'Invalid credentials.\n' });
         }
+        return done(null, user);
     }
 ));
 
