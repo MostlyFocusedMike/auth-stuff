@@ -7,10 +7,12 @@ const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
 const fetch = require('node-fetch');
 
+// https://medium.com/@evangow/server-authentication-basics-express-sessions-passport-and-curl-359b7456003d
+
 // configure passport.js to use the local strategy
 passport.use(new LocalStrategy(
-    // the first arg is pulling in the data from the POST request, and then sends it in as the first argument
-    // of the auth callback
+    // the first arg is pulling in the data from the POST request,
+    //  and then sends it in as the first argument of the auth callback
     // if it can't find the field, the whole thing never runs and the user is not authenticated
     { usernameField: 'email' },
     async (email, password, done) => {
@@ -29,7 +31,7 @@ passport.use(new LocalStrategy(
     }
 ));
 
-// tell passport how to serialize the user
+// pass port just takes the user
 passport.serializeUser((user, done) => {
     console.log('Inside serializeUser callback. User id is save to the session file store here')
     done(null, user.id);
@@ -83,8 +85,17 @@ app.get('/login', (req, res) => {
     res.send(`You got the login page!\n`)
 })
 
-
+// if you only need to do redirects, use this format
 app.post('/login', (req, res, next) => {
+    console.log('in the login ');
+    passport.authenticate(
+        'local',
+        { successRedirect: '/auth-required', failureRedirect: '/login' },
+    )(req, res, next);
+});
+
+// you can also use a custom function
+app.post('/custom-login', (req, res, next) => {
     console.log('Inside POST /login callback')
 
     const authFunc = (err, user, info) => {
@@ -99,14 +110,15 @@ app.post('/login', (req, res, next) => {
         }
         req.logIn(user, (err) => {
             console.log(`req.session.passport: ${JSON.stringify(req.session.passport)}`)
-            return res.send('You were authenticated & logged in!\n');
+            return res.json({msg: `user: ${JSON.stringify(user)} was logged in`});
         })
     }
 
     passport.authenticate('local', authFunc)(req, res, next);
 })
 
-app.get('/authrequired', (req, res) => {
+app.get('/auth-required', (req, res) => {
+    console.log('in /auth required: ');
     console.log(`User authenticated? ${req.isAuthenticated()}`)
     if(req.isAuthenticated()) {
         res.send('you hit the authentication endpoint\n')
