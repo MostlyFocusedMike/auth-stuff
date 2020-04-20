@@ -10,22 +10,31 @@ const flash = require('connect-flash'); // literally just to grab the passport e
 // https://medium.com/@evangow/server-authentication-basics-express-sessions-passport-and-curl-359b7456003d
 
 
-/* Setting up passport */
+/* Part 1: SETTING UP PASSPORT ***************************************************************************/
 // configure passport.js to use the local strategy
+
+/*
+1:  the verify callback is pulling in the data from the POST request, and passing in the
+    'usernameField', and 'password' properties from the data, along with the done() function
+    if it can't find the field, the whole thing never runs and the user is not authenticated
+    If an object is passed in before the verify callback, that let's you set alias names for
+    properties. Here we're telling it that the required "usernameField" is set to email.
+    We aren't touching the default "password" property
+
+2:  The "Verify callback" this actually determines whether the user gets authenticated
+3:  The logic of this callback is anything, here we're using node-fetch to grab from our
+    fake DB powered by json server.
+*/
 passport.use(new LocalStrategy(
-    // the first arg is pulling in the data from the POST request,
-    //  and then sends it in as the first argument of the auth callback
-    // if it can't find the field, the whole thing never runs and the user is not authenticated
-    { usernameField: 'email' },
-    async (email, password, done) => {
-        console.log('email: ', email);
-        const dbUser = await fetch(`http://localhost:5000/users?email=${email}`).then(r => r.json())
+    { usernameField: 'email' }, // 1
+    async (email, password, done) => { // 2
+        const dbUser = await fetch(`http://localhost:5000/users?email=${email}`).then(r => r.json()) // 3
         const user = dbUser[0] || {};
-        if (!user.email) return done(null, false, { message: 'Uh oh, invalid credentials.\n' }); // this will show up in req.flash('error')
+        if (!user.email) return done(null, false, { message: 'Uh oh, invalid credentials.\n' }); // 4a
         if (await bcrypt.compare(password, user.password)) {
-            return done(null, user);
+            return done(null, user); // 5
         }
-        return done(null, false, { message: 'Invalid credentials.\n' });
+        return done(null, false, { message: 'Invalid credentials.\n' }); // 4b
     }
 ));
 
@@ -45,6 +54,10 @@ passport.deserializeUser((id, done) => {
         .catch(error => done(error, false))
 });
 
+
+
+
+
 // create the server
 const app = express();
 app.use(express.json());
@@ -54,15 +67,15 @@ app.use(flash());
 
 const Session = session({
     genid: (req) => {
-      console.log('Inside the session middleware')
-      console.log('middle ware session id:', req.sessionID)
-      return uuid.v4() // use UUIDs for session IDs
+        console.log('Inside the session middleware')
+        console.log('middle ware session id:', req.sessionID)
+        return uuid.v4() // use UUIDs for session IDs
     },
     store: new FileStore(),
     secret: 'keyboard cat', // should be env var
     resave: false,
     saveUninitialized: true
-  })
+})
 app.use(Session)
 
 app.use(passport.initialize());
@@ -71,13 +84,13 @@ app.use(passport.session());
 
 // create the homepage route at '/'
 app.get('/', (req, res) => {
-  // req.session is where you store any info you want
-  if (req.session.views) {
-    req.session.views++;
-  } else {
-      req.session.views = 1;
-  }
-  res.send(`You hit home page!\n`)
+    // req.session is where you store any info you want
+    if (req.session.views) {
+        req.session.views++;
+    } else {
+        req.session.views = 1;
+    }
+    res.send(`You hit home page!\n`)
 })
 
 app.get('/login', (req, res) => {
@@ -144,9 +157,9 @@ app.post('/custom-login', (req, res, next) => {
             return res.json({msg: `user: ${JSON.stringify(user)} was logged in`});
         })
     }
-
     passport.authenticate('local', authFunc)(req, res, next);
-})
+});
+
 const authenticatedMiddleware = (req, res, next) => {
     if(req.isAuthenticated()) {
         console.log('User is authenticated')
@@ -179,5 +192,5 @@ app.get('/logout', function(req, res){
 const port = process.env.PORT || 3000;
 const host = '0.0.0.0';
 app.listen(port, host, () => {
-  console.log(`http://localhost:${port}`);
+    console.log(`http://localhost:${port}`);
 });

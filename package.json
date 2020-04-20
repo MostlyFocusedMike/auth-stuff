@@ -23,5 +23,8 @@
     "passport-local": "^1.0.0",
     "session-file-store": "^1.4.0",
     "uuid": "^7.0.3"
+  },
+  "devDependencies": {
+    "eslint": "^6.8.0"
   }
 }
