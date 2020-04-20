@@ -25,5 +25,6 @@ module.exports = {
         "import/prefer-default-export": "off",
         "arrow-parens": "off",
         "global-require": "off",
+        "semi": ["error", "always"]
     },
 };

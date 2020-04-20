@@ -10,109 +10,155 @@ const flash = require('connect-flash'); // literally just to grab the passport e
 // https://medium.com/@evangow/server-authentication-basics-express-sessions-passport-and-curl-359b7456003d
 
 
-/* Setting up passport */
+/* Part 1: SETTING UP PASSPORT ***************************************************************************/
 // configure passport.js to use the local strategy
+
+/*
+http://www.passportjs.org/docs/configure/
+1:  the verify callback is pulling in the data from the POST request, and passing in the
+    'usernameField', and 'password' properties from the data, along with the done() function
+    if it can't find the field, the whole thing never runs and the user is not authenticated
+    If an object is passed in before the verify callback, that let's you set alias names for
+    properties. Here we're telling it that the required "usernameField" is set to email.
+    We aren't touching the default "password" property
+
+2:  The "Verify callback" this actually determines whether the user gets authenticated
+3:  The logic of this callback is anything, here we're using node-fetch to grab from our
+    fake DB powered by json server.
+*/
 passport.use(new LocalStrategy(
-    // the first arg is pulling in the data from the POST request,
-    //  and then sends it in as the first argument of the auth callback
-    // if it can't find the field, the whole thing never runs and the user is not authenticated
-    { usernameField: 'email' },
-    async (email, password, done) => {
-        console.log('email: ', email);
-        const dbUser = await fetch(`http://localhost:5000/users?email=${email}`).then(r => r.json())
+    { usernameField: 'email' }, // 1
+    async (email, password, done) => { // 2
+        const dbUser = await fetch(`http://localhost:5000/users?email=${email}`).then(r => r.json()); // 3
         const user = dbUser[0] || {};
-        if (!user.email) return done(null, false, { message: 'Uh oh, invalid credentials.\n' }); // this will show up in req.flash('error')
-        if (await bcrypt.compare(password, user.password)) {
-            return done(null, user);
-        }
-        return done(null, false, { message: 'Invalid credentials.\n' });
+        const passwordsDoMatch = await bcrypt.compare(password, user.password);
+        if (user.email && passwordsDoMatch) return done(null, user); // 5
+        return done(null, false, { message: 'Invalid credentials.\n' }); // 4b
     }
 ));
 
-// pass port just takes the user
+/*
+    Unlike something like express-cookie, express-session does not save anything except the
+
+    It takes that user object and whatever you pass into the done() as the second arg will be
+    saved into session.passport.user, but no matter what it will save the whole user object into
+    req.user. Typically, to keep sessions small, you just save the user's id into the session
+*/
 passport.serializeUser((user, done) => {
-    console.log('Inside serializeUser callback. User id is save to the session file store here')
-    done(null, user.id);
+    console.log('Inside serialize user method');
+    done(null, user);
 });
 
 // Inside deserializeUser callback
-// this function takes the session id (which is the user id) and decrypts it so the app has the user
+// this function takes the session.user value and allows you to use it to find the full user object
+// Remember, in our serialize function, we just passed in the user's id, so that's what we have access
+// to in the cookie
 passport.deserializeUser((id, done) => {
-    console.log('in deserialize: ', );
+    console.log('in deserialize: ');
+    console.log('id: ', id);
     fetch(`http://localhost:5000/users/${id}`)
         .then(r => r.json())
         .then(user => done(null, user))
-        .catch(error => done(error, false))
+        .catch(error => done(error, false));
 });
+
+
+
+
 
 // create the server
 const app = express();
+// add & configure middleware
 app.use(express.json());
 app.use(flash());
 
-// add & configure middleware
-
-const Session = session({
+app.use(session({
     genid: (req) => {
-      console.log('Inside the session middleware')
-      console.log('middle ware session id:', req.sessionID)
-      return uuid.v4() // use UUIDs for session IDs
+        console.log('Inside the session middleware');
+        console.log('middle ware session id:', req.sessionID);
+        return uuid.v4(); // use UUIDs for session IDs
     },
     store: new FileStore(),
     secret: 'keyboard cat', // should be env var
     resave: false,
     saveUninitialized: true
-  })
-app.use(Session)
+}));
 
 app.use(passport.initialize());
 // it's important that express-session comes first
 app.use(passport.session());
 
-// create the homepage route at '/'
+/* ADD THE ACTUAL ROUTES */
+
+// home route, just showing examples of manipulating session value
 app.get('/', (req, res) => {
-  // req.session is where you store any info you want
-  if (req.session.views) {
-    req.session.views++;
-  } else {
-      req.session.views = 1;
-  }
-  res.send(`You hit home page!\n`)
-})
+    // req.session is where you store any info you want
+    if (req.session.views) {
+        req.session.views++;
+    } else {
+        req.session.views = 1;
+    }
+    res.send(`You hit home page!\n`);
+});
 
+
+// The GET login route would be a view normally, here it just shows the
+// flash value. Which for some reason takes a whole package to use
+// this is where the passport failed auth messages show up
 app.get('/login', (req, res) => {
-    console.log('Inside GET /login callback function')
-    console.log('req.sessionID', req.sessionID)
-    const error = req.flash('error')[0] // seemd flash can only be called once so store it
+    console.log('Inside GET /login callback function');
+    console.log('req.sessionID', req.sessionID);
+    const error = req.flash('error')[0]; // seemd flash can only be called once so store it
     if (error) return res.send(error);
-    res.send(`You got the login page!\n`)
-})
+    res.send(`You got the login page!\n`);
+});
 
-// if you only need to do redirects, use this format
+
+/* LOGGING IN THE USER *****************************************************************************/
+// if you only need to do redirects, use the built in passport.authenticate
 app.post('/login', (req, res, next) => {
-    console.log('in the login ');
+    console.log('Inside POST /login callback');
     passport.authenticate(
         'local',
         { successRedirect: '/auth-required', failureRedirect: '/login' },
     )(req, res, next);
 });
+// You could also just plug in the passport callback itself
+// app.post('/login', passport.authenticate(
+//     'local',
+//     { successRedirect: '/auth-required', failureRedirect: '/login' },
+// ));
 
+// if you don't want redirects and want a custom function, you can add your own like this
+// notice that you have to use req.logIn to do your custom logic
+app.post('/custom-login', (req, res, next) => {
+    console.log('Inside POST /custom-login');
+
+    const authFunc = (err, user, info) => {
+        console.log('Inside passport.authenticate() callback');
+        console.log(`req.session.passport: ${JSON.stringify(req.session.passport)}`);
+        console.log(`req.user outside: ${JSON.stringify(user)}`);
+        if (err) { return next(err); } // not really the elegant way to handle this
+        if (!user) return res.redirect('/login');
+        req.logIn(user, (err) => {
+            console.log(`req.session.passport: ${JSON.stringify(req.session.passport)}`);
+            return res.json({msg: `user: ${JSON.stringify(user)} was logged in`});
+        });
+    };
+    passport.authenticate('local', authFunc)(req, res, next);
+});
 
 app.post('/sign-up', async (req, res, next) => {
-    const {email, password} = req.body
-    console.log('req.body: ', req.body);
+    console.log('Inside POST /sign-up');
+    const {email, password} = req.body;
     if (password && email) {
-        const passwordDigest = await bcrypt.hash(password, 8);
+        const hashedAndSaltedPassword = await bcrypt.hash(password, 8);
+        const body = JSON.stringify({ email, password: hashedAndSaltedPassword });
         await fetch(`http://localhost:5000/users`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                email,
-                password: passwordDigest,
-            })
-        }).then(r => r.json())
+            headers: { 'Content-Type': 'application/json' },
+            body
+        }).then(r => r.json());
         return passport.authenticate(
             'local',
             {
@@ -122,55 +168,36 @@ app.post('/sign-up', async (req, res, next) => {
             },
         )(req, res, next);
     }
-    res.send('Please enter an email and password')
+    res.send('Please enter an email and password');
 });
 
-// you can also use a custom function
-app.post('/custom-login', (req, res, next) => {
-    console.log('Inside POST /login callback')
-
-    const authFunc = (err, user, info) => {
-        console.log('Inside passport.authenticate() callback');
-        console.log(`req.session.passport: ${JSON.stringify(req.session.passport)}`)
-        console.log(`req.user outside: ${JSON.stringify(user)}`)
-        // req.login is added by passport
-        console.log('err: ', err);
-        if (err) { return next(err); }
-        if (!user) {
-            return res.redirect('/login');
-        }
-        req.logIn(user, (err) => {
-            console.log(`req.session.passport: ${JSON.stringify(req.session.passport)}`)
-            return res.json({msg: `user: ${JSON.stringify(user)} was logged in`});
-        })
-    }
-
-    passport.authenticate('local', authFunc)(req, res, next);
-})
 const authenticatedMiddleware = (req, res, next) => {
     if(req.isAuthenticated()) {
-        console.log('User is authenticated')
+        console.log('User is authenticated');
         next();
     } else {
-        res.redirect('/login')
+        res.redirect('/login');
     }
-}
+};
 
 app.get('/auth-required', authenticatedMiddleware, (req, res) => {
     console.log('in /auth-required: ');
     console.log('req.session: ', req.session);
-    console.log(`User authenticated? ${req.isAuthenticated()}`)
-    res.send('Welcome to the auth-required route')
-})
+    console.log('req.user: ', req.user);
+    console.log('req.session.passport: ', req.session.passport);
+    console.log(`User authenticated? ${req.isAuthenticated()}`);
+    res.send('Welcome to the auth-required route');
+});
 
 // even if you're authenticated, are you authorized to see the page?
 app.get('/auth-required/:userId', authenticatedMiddleware, (req, res) => {
     console.log('In /auth/user');
-    console.log(`User authenticated? ${req.user.email}`)
-    res.send('Welcome to the auth-required route')
-})
+    console.log(`User authenticated? ${req.user.email}`);
+    res.send('Welcome to the auth-required route');
+});
 
-app.get('/logout', function(req, res){
+// logs out the user by clearing the session and deleting the cookie
+app.delete('/logout', (req, res) => {
     req.logout();
     res.redirect('/');
 });
@@ -179,5 +206,5 @@ app.get('/logout', function(req, res){
 const port = process.env.PORT || 3000;
 const host = '0.0.0.0';
 app.listen(port, host, () => {
-  console.log(`http://localhost:${port}`);
+    console.log(`http://localhost:${port}`);
 });

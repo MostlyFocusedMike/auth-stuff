@@ -5,8 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "nodemon src/index.js",
-    "login:post": "curl -X POST http://localhost:3000/login -b cookie-file.txt -H 'Content-Type: application/json' -d '{\"email\":\"bob@test.com\", \"password\":\"password\"}'",
-    "json:server": "json-server --watch ./db.json --port 5000"
+    "fake-db": "json-server --watch ./db.json --port 5000"
   },
   "keywords": [],
   "author": "",
