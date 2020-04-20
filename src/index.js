@@ -6,8 +6,8 @@ const FileStore = require('session-file-store')(session);
 const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
 const fetch = require('node-fetch');
-const bcrypt = require('bcrypt-nodejs');
-
+const bcrypt = require('bcrypt');
+const flash = require('connect-flash'); // literally just to grab the passport error message, v dumb.
 // https://medium.com/@evangow/server-authentication-basics-express-sessions-passport-and-curl-359b7456003d
 
 // configure passport.js to use the local strategy
@@ -20,11 +20,11 @@ passport.use(new LocalStrategy(
         console.log('email: ', email);
         const dbUser = await fetch(`http://localhost:5000/users?email=${email}`).then(r => r.json())
         const user = dbUser[0] || {};
-        if (!user) return done(null, false, { message: 'Invalid credentials.\n' });
-        if (!bcrypt.compareSync(password, user.password)) {
-            return done(null, false, { message: 'Invalid credentials.\n' });
+        if (!user.email) return done(null, false, { message: 'Uh oh, invalid credentials.\n' }); // this will show up in req.flash('error')
+        if (await bcrypt.compare(password, user.password)) {
+            return done(null, user);
         }
-        return done(null, user);
+        return done(null, false, { message: 'Invalid credentials.\n' });
     }
 ));
 
@@ -47,19 +47,22 @@ passport.deserializeUser((id, done) => {
 // create the server
 const app = express();
 app.use(express.json());
+app.use(flash());
 
 // add & configure middleware
-app.use(session({
-  genid: (req) => {
-    console.log('Inside the session middleware')
-    console.log('middle ware session id:', req.sessionID)
-    return uuid.v4() // use UUIDs for session IDs
-  },
-  store: new FileStore(),
-  secret: 'keyboard cat', // should be env var
-  resave: false,
-  saveUninitialized: true
-}))
+
+const Session = session({
+    genid: (req) => {
+      console.log('Inside the session middleware')
+      console.log('middle ware session id:', req.sessionID)
+      return uuid.v4() // use UUIDs for session IDs
+    },
+    store: new FileStore(),
+    secret: 'keyboard cat', // should be env var
+    resave: false,
+    saveUninitialized: true
+  })
+app.use(Session)
 
 app.use(passport.initialize());
 // it's important that express-session comes first
@@ -79,6 +82,8 @@ app.get('/', (req, res) => {
 app.get('/login', (req, res) => {
     console.log('Inside GET /login callback function')
     console.log('req.sessionID', req.sessionID)
+    const error = req.flash('error')[0] // seemd flash can only be called once so store it
+    if (error) return res.send(error);
     res.send(`You got the login page!\n`)
 })
 
@@ -89,6 +94,34 @@ app.post('/login', (req, res, next) => {
         'local',
         { successRedirect: '/auth-required', failureRedirect: '/login' },
     )(req, res, next);
+});
+
+
+app.post('/sign-up', async (req, res, next) => {
+    const {email, password} = req.body
+    console.log('req.body: ', req.body);
+    if (password && email) {
+        const passwordDigest = await bcrypt.hash(password, 8);
+        await fetch(`http://localhost:5000/users`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                email,
+                password: passwordDigest,
+            })
+        }).then(r => r.json())
+        return passport.authenticate(
+            'local',
+            {
+                successRedirect: '/auth-required',
+                failureRedirect: '/login',
+                failureFlash: true,
+            },
+        )(req, res, next);
+    }
+    res.send('Please enter an email and password')
 });
 
 // you can also use a custom function
@@ -116,6 +149,7 @@ app.post('/custom-login', (req, res, next) => {
 
 app.get('/auth-required', (req, res) => {
     console.log('in /auth required: ');
+    console.log('req.session: ', req.session);
     console.log(`User authenticated? ${req.isAuthenticated()}`)
     if(req.isAuthenticated()) {
         res.send('you hit the authentication endpoint\n')
@@ -123,6 +157,11 @@ app.get('/auth-required', (req, res) => {
         res.redirect('/')
     }
 })
+
+app.get('/logout', function(req, res){
+    req.logout();
+    res.redirect('/');
+});
 
 addAllRoutes(app);
 

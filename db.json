@@ -9,6 +9,36 @@
       "id": 2,
       "email": "bill@test.com",
       "password": "$2a$12$VHZ9aJ5A87YeFop4xVW.aOMm95ClU.EviyT9o0i8HYLdG6w6ctMfW"
+    },
+    {
+      "email": "sara@test.com",
+      "password": "$2a$12$VHZ9aJ5A87YeFop4xVW.aOMm95ClU.EviyT9o0i8HYLdG6w6ctMfW",
+      "id": 3
+    },
+    {
+      "email": "bob@test.com",
+      "password": "passwordDigest,",
+      "id": 4
+    },
+    {
+      "email": "1@test.com",
+      "password": "passwordDigest,",
+      "id": 5
+    },
+    {
+      "email": "1@test.com",
+      "password": "$2b$08$73oXv1Y7bJt4DHKAt97FZeYWWVhcoso/wPXC55xPh4o8hlnoGsMnm",
+      "id": 6
+    },
+    {
+      "email": "2@test.com",
+      "password": "$2b$08$hf3.TI1fDYp2QJBwK71EUO4ks1fjbYvZ58VN7Ysmu4jJufgL3vHJq",
+      "id": 7
+    },
+    {
+      "email": "3@test.com",
+      "password": "$2b$08$T/uJ72Z0XLoEIsm9/X/IRu8CpVZynUnQY9e0LLdXMZVwd6jEI8tw.",
+      "id": 8
     }
   ]
 }
