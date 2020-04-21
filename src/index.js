@@ -13,16 +13,17 @@ const flash = require('connect-flash'); // literally just to grab the passport e
 /* Part 1: SETTING UP PASSPORT ***************************************************************************/
 /*
 Passport uses things called "strategies" to authenticate users. Here we are using a very basic strategy
-called local. It requires that a form submits certain shaped data so it can pull a username and password.
+called 'local.' It requires that a request submits certain shaped data so it can pull a username and password.
 These values get passed into its callback and it ultimately returns a user object with a done() function.
 However, in the real world you should opt to swap in a more robust strategy, like an OAuth one through
 google or twitter.
 
 http://www.passportjs.org/docs/configure/
-1:  the verify callback is going to  pull in the data from the POST request, and passing in the
-    'usernameField', and 'password' properties from the data, along with the done() function
+The numbers correspond to the comments in the code
+1:  the verify callback is going to  pull in the data from the POST request, the
+    'usernameField', and 'password' properties.
     if it can't find the field, the whole thing never runs and the user is not authenticated.
-    However, If an object is passed in before the verify callback, that let's you set alias
+    However, If an object is passed in before the verify callback, that lets you set alias
     names for properties. Here we're telling it that the required "usernameField" is set to email.
     We aren't touching the default "password" property.
 
@@ -42,7 +43,7 @@ http://www.passportjs.org/docs/configure/
     package. Here we did, and you can see it in action when we have passport use this strategy
 */
 passport.use(new LocalStrategy(
-    { usernameField: 'email' }, // 1
+    { usernameField: 'email' }, // 1 // userma check
     async (email, password, done) => { // 2
         const dbUser = await fetch(`http://localhost:5000/users?email=${email}`).then(r => r.json()); // 3
         const user = dbUser[0] || {};
@@ -53,12 +54,19 @@ passport.use(new LocalStrategy(
 ));
 
 /*
+    What's a session?
     Unlike express-cookie, express-session does not save anything except the session id on the front end
-    cookie. It then uses that as a key on the server to find the actual session data. When a
-    user first logs in, the serializeUser function is designed for you to give you access to the user
+    cookie. It then uses that as a key on the server to find the actual session data. In this little tutorial
+    we are just saving the session data in a file with the session-file-store package, but in real life you
+    would want to check the docs for a more robust pacakge that uses a pg or redis database to store session data
+*/
+
+// SERIALIZING AND DESERIALIZING
+/*
+    When a user first logs in, the serializeUser function is designed to give you access to the user
     object you just authenticated and store what you want in the session.
 
-    Whatever you pass into the done() as the second arg will be saved into session.passport.user,
+    Whatever you pass into done() as the second arg will be saved into session.passport.user,
     but no matter what it will save the whole user object into req.user.
     Typically, to keep sessions small, you just save the user's id into the session
 */
@@ -66,12 +74,13 @@ passport.serializeUser((user, done) => {
     console.log('Inside serialize user method');
     done(null, user.id);
 });
-
-// Inside deserializeUser callback is for every time after the initial login.
-// this function takes the session.user value and allows you to use it to find the full user object
-// Remember, in our serialize function above, we just passed in the user's id,
-// so that's what we have access to. Again, we're using the fake DB with fetch, but in real life
-// you would just have your models
+/*
+    The deserializeUser callback is for every time after the initial login.
+    This function takes the session.user value and allows you to use it to find the full user object
+    Remember, in our serialize function above, we just passed in the user's id,
+    so that's what we have access to. Again, we're using the fake DB with fetch, but in real life
+    you would just have your models
+*/
 passport.deserializeUser((userId, done) => {
     console.log('in deserialize: ');
     console.log('userId: ', userId);
@@ -81,7 +90,9 @@ passport.deserializeUser((userId, done) => {
         .catch(error => done(error, false));
 });
 
-// create the server
+
+
+/* CREATE THE SERVER *********************************************************************/
 const app = express();
 // add & configure middleware
 app.use(express.json());
