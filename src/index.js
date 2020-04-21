@@ -1,3 +1,6 @@
+// original article this is from
+// https://medium.com/@evangow/server-authentication-basics-express-sessions-passport-and-curl-359b7456003d
+
 const express = require('express');
 const uuid = require('uuid');
 const session = require('express-session');
@@ -6,9 +9,7 @@ const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
 const fetch = require('node-fetch');
 const bcrypt = require('bcrypt');
-const flash = require('connect-flash'); // literally just to grab the passport error message, v dumb.
-// https://medium.com/@evangow/server-authentication-basics-express-sessions-passport-and-curl-359b7456003d
-
+const flash = require('connect-flash');
 
 /* Part 1: SETTING UP PASSPORT ***************************************************************************/
 /*
@@ -98,6 +99,10 @@ const app = express();
 app.use(express.json());
 app.use(flash());
 
+// Register the session data for your app. This is primarily responsible for
+// generating the id's of the session with genid(), and configuring settings,
+// like the cookie secret and what filestore to use. Also, Passport.session
+// expects this to come first
 app.use(session({
     genid: (req) => {
         console.log('Inside the session middleware');
@@ -110,11 +115,12 @@ app.use(session({
     saveUninitialized: true,
 }));
 
+// register the initialized passport
 app.use(passport.initialize());
-// it's important that express-session comes first
+// it's important that express-session was already redigstered
 app.use(passport.session());
 
-/* ADD THE ACTUAL ROUTES */
+/* ADD THE ACTUAL ROUTES ****************************************************************************/
 
 // home route, just showing examples of manipulating session value
 app.get('/', (req, res) => {
