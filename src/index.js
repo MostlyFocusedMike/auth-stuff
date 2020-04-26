@@ -140,7 +140,11 @@ app.get('/', (req, res) => {
     } else {
         req.session.views = 1;
     }
-    res.send('<h1>You hit home page!</h1><a href="/sign-up">Sign up!</a>');
+    res.send(`
+        <h1>You hit home page!</h1>
+        <a href="/sign-up">Sign up!</a>
+        <a href="/log-in">Log in!</a>
+    `);
 });
 
 /* LOGGING IN THE USER *****************************************************************************/
@@ -150,36 +154,36 @@ app.get('/', (req, res) => {
     Notice here is where you have to enable the flash message, but you don't have to.
 
 */
-app.post('/login', (req, res, next) => {
-    console.log('Inside POST /login callback');
+app.post('/log-in', (req, res, next) => {
+    console.log('Inside POST /log-in callback');
     passport.authenticate(
         'local',
         {
             successRedirect: '/auth-required',
-            failureRedirect: '/login',
+            failureRedirect: '/log-in',
             failureFlash: true,
         },
     )(req, res, next);
 });
 // You could also just plug in the passport callback itself if you are doing nothing else
-// app.post('/login', passport.authenticate(
+// app.post('/log-in', passport.authenticate(
 //     'local',
-//     { successRedirect: '/auth-required', failureRedirect: '/login', failureFlash: true },
+//     { successRedirect: '/auth-required', failureRedirect: '/log-in', failureFlash: true },
 // ));
 
 /*
     The failure messages from the local strategy will show up in
     an array stored in the key of 'error'
 */
-app.get('/login', (req, res) => {
-    console.log('Inside GET /login callback function');
+app.get('/log-in', (req, res) => {
+    console.log('Inside GET /log-in callback function');
     console.log('req.sessionID', req.sessionID);
     if (req.isAuthenticated()) return res.redirect('/auth-required');
     console.log('req.body: ', req.body);
     const error = req.flash('error')[0]; // seems flash can only be called once so store it
     res.send(`
     <h1>Log in</h1>
-    <form method="POST" action="/login">
+    <form method="POST" action="/log-in">
         <p style="color: red;">${error ? `Login error: ${error}`: ''}</p>
         <label for="email">Email:</label>
         <input type="text" id="email" name="email"/>
@@ -204,7 +208,7 @@ app.post('/custom-login', (req, res, next) => {
         console.log(`req.session.passport: ${JSON.stringify(req.session.passport)}`);
         console.log(`req.user outside: ${JSON.stringify(user)}`);
         if (err) { return next(err); } // not really the elegant way to handle this
-        if (!user) return res.redirect('/login');
+        if (!user) return res.redirect('/log-in');
         req.logIn(user, (err) => {
             console.log(`req.session.passport: ${JSON.stringify(req.session.passport)}`);
             return res.json({msg: `user: ${JSON.stringify(user)} was logged in`});
@@ -232,7 +236,7 @@ app.post('/sign-up', async (req, res, next) => {
         'local',
         {
             successRedirect: '/auth-required',
-            failureRedirect: '/login',
+            failureRedirect: '/log-in',
             failureFlash: true,
         },
     )(req, res, next);
@@ -262,7 +266,7 @@ const checkIfAuthenticatedMiddleware = (req, res, next) => {
         console.log('User is authenticated');
         next();
     } else {
-        res.redirect('/login');
+        res.redirect('/log-in');
     }
 };
 
