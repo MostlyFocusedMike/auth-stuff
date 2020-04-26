@@ -1,0 +1,14 @@
+<form method="POST" action="/login">
+    <h3>`${error}`</h3>
+    <label for="email">Email:</label>
+    <input type="text" id="email" />
+    <label for="password">Password:</label>
+    <input type="password" id="password" />
+    <button>Submit</button>
+</form>
+
+
+reqSession: req.session,
+reqUser: req.user,
+passport: req.session.passport,
+isUserAuthenticated: req.isAuthenticated(), // provided by passport

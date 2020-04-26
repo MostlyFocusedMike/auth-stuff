@@ -97,6 +97,7 @@ passport.deserializeUser((userId, done) => {
 const app = express();
 // add & configure middleware
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(flash());
 
 // Register the session data for your app. This is primarily responsible for
@@ -130,7 +131,7 @@ app.get('/', (req, res) => {
     } else {
         req.session.views = 1;
     }
-    res.send(`You hit home page!\n`);
+    res.send('<h1>You hit home page!</h1>');
 });
 
 /* LOGGING IN THE USER *****************************************************************************/
@@ -158,16 +159,24 @@ app.post('/login', (req, res, next) => {
 // ));
 
 /*
-    The GET login route would be a view normally, here it just shows a success
-    or flash value. The failure messages from the local strategy will show up in
+    The failure messages from the local strategy will show up in
     an array stored in the key of 'error'
 */
 app.get('/login', (req, res) => {
     console.log('Inside GET /login callback function');
     console.log('req.sessionID', req.sessionID);
+    console.log('req.body: ', req.body);
     const error = req.flash('error')[0]; // seems flash can only be called once so store it
-    if (error) return res.send(error);
-    res.send(`You got the login page!\n`);
+    res.send(`
+    <form method="POST" action="/login">
+        <p style="color: red;">${error ? `Login error: ${error}`: ''}</p>
+        <label for="email">Email:</label>
+        <input type="text" id="email" name="email"/>
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" />
+        <button>Submit</button>
+    </form>
+    `);
 });
 
 /*
@@ -234,17 +243,24 @@ const checkIfAuthenticatedMiddleware = (req, res, next) => {
 // remember we just added the views property for fun as a test
 app.get('/auth-required', checkIfAuthenticatedMiddleware, (req, res) => {
     console.log('in /auth-required: ');
-    res.json({
-        message: "Good job! You're authenticated!",
+    const sessionData = JSON.stringify({
         reqSession: req.session,
         reqUser: req.user,
         passport: req.session.passport,
-        isUserAuthenticated: req.isAuthenticated(), // provided by passport
-    });
+        isUserAuthenticated: req.isAuthenticated(),
+    }, null, 2);
+
+    res.send(`
+    <h1>You're in!</h1>
+    <pre>${sessionData}</pre>
+    <form method="POST" action="/logout">
+        <button>Logout</button>
+    </form>
+    `);
 });
 
 // logs out the user by clearing the session and deleting the cookie
-app.delete('/logout', (req, res) => {
+app.post('/logout', (req, res) => {
     req.logout();
     res.redirect('/');
 });
