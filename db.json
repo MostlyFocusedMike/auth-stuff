@@ -24,6 +24,11 @@
       "email": "rod@test.com",
       "password": "$2b$08$C0Yb3xgkSp/4K1gKnrl8K.2OW9OQ4JIS3IQKKDUSlwgV5SYIJwujS",
       "id": 5
+    },
+    {
+      "email": "tara@test.com",
+      "password": "$2b$08$fqy.81cvtWZls9ebHHJFeOqYk2s3Z5M2oJaKZ6AsHLuXvxCefDCDG",
+      "id": 6
     }
   ]
 }

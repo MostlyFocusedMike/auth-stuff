@@ -140,7 +140,7 @@ app.get('/', (req, res) => {
     } else {
         req.session.views = 1;
     }
-    res.send('<h1>You hit home page!</h1>');
+    res.send('<h1>You hit home page!</h1><a href="/sign-up">Sign up!</a>');
 });
 
 /* LOGGING IN THE USER *****************************************************************************/
@@ -174,6 +174,7 @@ app.post('/login', (req, res, next) => {
 app.get('/login', (req, res) => {
     console.log('Inside GET /login callback function');
     console.log('req.sessionID', req.sessionID);
+    if (req.isAuthenticated()) return res.redirect('/auth-required');
     console.log('req.body: ', req.body);
     const error = req.flash('error')[0]; // seems flash can only be called once so store it
     res.send(`
@@ -240,8 +241,9 @@ app.post('/sign-up', async (req, res, next) => {
 // just the sign up form
 app.get('/sign-up', async (req, res, next) => {
     console.log('Inside GET /sign-up');
+    if (req.isAuthenticated()) return res.redirect('/auth-required');
     return res.send(`
-    <h1>Log in</h1>
+    <h1>Sign Up!</h1>
     <form method="POST" action="/sign-up">
         <label for="email">Email:</label>
         <input type="text" id="email" name="email"/>
