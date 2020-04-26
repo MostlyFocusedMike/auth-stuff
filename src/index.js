@@ -98,6 +98,15 @@ const app = express();
 // add & configure middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// disable cache since it's dev https://stackoverflow.com/questions/22632593/how-to-disable-webpage-caching-in-expressjs-nodejs
+app.set('etag', false);
+app.use((req, res, next) => {
+    res.set('Cache-Control', 'no-store');
+    next();
+});
+
+// for passport user errors
 app.use(flash());
 
 // Register the session data for your app. This is primarily responsible for
@@ -168,6 +177,7 @@ app.get('/login', (req, res) => {
     console.log('req.body: ', req.body);
     const error = req.flash('error')[0]; // seems flash can only be called once so store it
     res.send(`
+    <h1>Log in</h1>
     <form method="POST" action="/login">
         <p style="color: red;">${error ? `Login error: ${error}`: ''}</p>
         <label for="email">Email:</label>
@@ -209,6 +219,7 @@ app.post('/custom-login', (req, res, next) => {
 app.post('/sign-up', async (req, res, next) => {
     console.log('Inside POST /sign-up');
     const {email, password} = req.body;
+    console.log('req.body: ', req.body);
     if (!password || !email) res.send('Please enter an email and password');
 
     const hashedAndSaltedPassword = await bcrypt.hash(password, 8);
@@ -224,6 +235,21 @@ app.post('/sign-up', async (req, res, next) => {
             failureFlash: true,
         },
     )(req, res, next);
+});
+
+// just the sign up form
+app.get('/sign-up', async (req, res, next) => {
+    console.log('Inside GET /sign-up');
+    return res.send(`
+    <h1>Log in</h1>
+    <form method="POST" action="/sign-up">
+        <label for="email">Email:</label>
+        <input type="text" id="email" name="email"/>
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" />
+        <button>Submit</button>
+    </form>
+    `);
 });
 
 // In real life, you'd likely have a lot more routes that you'd want behind auth

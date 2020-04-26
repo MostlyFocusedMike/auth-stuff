@@ -14,6 +14,16 @@
       "email": "sara@test.com",
       "password": "$2a$12$VHZ9aJ5A87YeFop4xVW.aOMm95ClU.EviyT9o0i8HYLdG6w6ctMfW",
       "id": 3
+    },
+    {
+      "email": "gene@test.com",
+      "password": "$2b$08$CmU18c7KwY85qLiS6NBRR.r8Zb/K9hIVeFtPeXW/rFCzdVb4i0kxu",
+      "id": 4
+    },
+    {
+      "email": "rod@test.com",
+      "password": "$2b$08$C0Yb3xgkSp/4K1gKnrl8K.2OW9OQ4JIS3IQKKDUSlwgV5SYIJwujS",
+      "id": 5
     }
   ]
 }
