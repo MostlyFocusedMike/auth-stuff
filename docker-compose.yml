@@ -1,0 +1,33 @@
+version: "3"
+
+services:
+  auth_server:
+    build: './'
+    command: nodemon src/index.js
+    ports:
+      - '8000:8000'
+    environment:
+      DEV_DB_HOST: pg_db
+      DEV_DB_PORT: 5432
+      DEV_DB_USER: root
+      DEV_DB_PSWD: root
+      DEV_DB_NAME: boiler_room
+      NODE_ENV: development
+      PORT: 8000
+    volumes:
+      - ./sessions/:/usr/app/sessions/
+      - ./src/:/usr/app/src/
+      - ./package.json:/usr/app/package.json
+    container_name: auth_server_container
+
+  auth_db:
+    image: postgres:9.6-alpine
+    ports:
+      - '5431:5432'
+    environment:
+      # these are PG builtin env vars
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: auth_db
+
+    container_name: auth_db_container

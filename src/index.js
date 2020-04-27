@@ -11,7 +11,7 @@ const flash = require('connect-flash');
 passport.use(new LocalStrategy(
     { usernameField: 'email' }, // 1 // username check
     async (email, password, done) => { // 2
-        const dbUser = await fetch(`http://localhost:5000/users?email=${email}`).then(r => r.json()); // 3
+        const dbUser = await fetch(`http://0.0.0.0:5000/users?email=${email}`).then(r => r.json()); // 3
         const user = dbUser[0] || {};
         const passwordsDoMatch = await bcrypt.compare(password, user.password);
         if (user.email && passwordsDoMatch) return done(null, user); // 4
@@ -27,7 +27,7 @@ passport.serializeUser((user, done) => {
 passport.deserializeUser((userId, done) => {
     console.log('in deserialize: ');
     console.log('userId: ', userId);
-    fetch(`http://localhost:5000/users/${userId}`)
+    fetch(`http://0.0.0.0:5000/users/${userId}`)
         .then(r => r.json())
         .then(user => done(null, user))
         .catch(error => done(error, false));
@@ -131,7 +131,7 @@ app.post('/sign-up', async (req, res, next) => {
     const hashedAndSaltedPassword = await bcrypt.hash(password, 8);
     const body = JSON.stringify({ email, password: hashedAndSaltedPassword });
     const options = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body };
-    await fetch(`http://localhost:5000/users`, options).then(r => r.json());
+    await fetch(`http://0.0.0.0:5000/users`, options).then(r => r.json());
 
     return passport.authenticate(
         'local',
@@ -193,5 +193,5 @@ app.post('/logout', (req, res) => {
 const port = process.env.PORT || 3000;
 const host = '0.0.0.0';
 app.listen(port, host, () => {
-    console.log(`http://localhost:${port}`);
+    console.log(`http://0.0.0.0:${port}`);
 });
