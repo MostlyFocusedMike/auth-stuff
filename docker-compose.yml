@@ -15,7 +15,6 @@ services:
       NODE_ENV: development
       PORT: 8000
     volumes:
-      - ./sessions/:/usr/app/sessions/
       - ./src/:/usr/app/src/
       - ./package.json:/usr/app/package.json
     container_name: auth_server_container

@@ -131,8 +131,8 @@ app.post('/sign-up', async (req, res, next) => {
     const hashedAndSaltedPassword = await bcrypt.hash(password, 8);
     const body = JSON.stringify({ email, password: hashedAndSaltedPassword });
     const options = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body };
-    await fetch(`http://0.0.0.0:5000/users`, options).then(r => r.json());
-
+    const thing = await fetch(`http://0.0.0.0:5000/users`, options).then(r => r.json());
+    console.log('thing: ', thing);
     return passport.authenticate(
         'local',
         {
@@ -186,7 +186,9 @@ app.get('/auth-required', checkIfAuthenticatedMiddleware, (req, res) => {
 });
 
 app.post('/logout', (req, res) => {
+    console.log('logout: ');
     req.logout();
+    console.log('req', req.isAuthenticated());
     res.redirect('/');
 });
 
